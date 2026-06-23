@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="رواق العلوم الشرعية والعربية - مشغل المحاضرات التفاعلي">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مشاهدة المحاضرات - رواق العلوم الشرعية والعربية</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Specific CSS overrides for the Lecture Player UI to make it premium */
+        .lecture-player-container {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+            margin-bottom: 40px;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .video-player-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .video-box {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+            border-radius: var(--border-radius-lg);
+            overflow: hidden;
+            border: 2px solid var(--accent-color);
+            box-shadow: var(--shadow-lg);
+            background: #000;
+        }
+
+        .video-iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .video-details-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-md);
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .video-current-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .playlist-column {
+            background: var(--card-bg);
+            border: 1.5px solid var(--border-color);
+            border-radius: var(--border-radius-lg);
+            display: flex;
+            flex-direction: column;
+            max-height: 700px;
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+
+        .playlist-header {
+            padding: 20px;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%);
+            color: var(--text-white);
+            border-bottom: 2px solid var(--accent-color);
+        }
+
+        .playlist-header-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .playlist-header-count {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        .playlist-items {
+            overflow-y: auto;
+            flex: 1;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* Customize scrollbar */
+        .playlist-items::-webkit-scrollbar {
+            width: 6px;
+        }
+        .playlist-items::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .playlist-items::-webkit-scrollbar-thumb {
+            background-color: var(--accent-color);
+            border-radius: 20px;
+        }
+
+        .playlist-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            border-radius: var(--border-radius-sm);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: var(--transition);
+            background: var(--bg-color);
+        }
+
+        .playlist-item:hover {
+            background: var(--card-bg);
+            border-color: var(--accent-color);
+            transform: translateX(-4px);
+        }
+
+        .playlist-item.active {
+            background: rgba(197, 160, 89, 0.15);
+            border-color: var(--accent-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .playlist-item-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: var(--text-white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            transition: var(--transition);
+        }
+
+        .playlist-item.active .playlist-item-num {
+            background: var(--accent-color);
+            color: var(--primary-dark);
+        }
+
+        .playlist-item-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-color);
+            line-height: 1.4;
+        }
+
+        .playlist-item.active .playlist-item-title {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .error-card {
+            background: var(--card-bg);
+            border: 2px solid var(--accent-color);
+            border-radius: var(--border-radius-lg);
+            padding: 50px 30px;
+            text-align: center;
+            max-width: 500px;
+            margin: 100px auto;
+            box-shadow: var(--shadow-lg);
+        }
+
+        @media (max-width: 992px) {
+            .lecture-player-container {
+                grid-template-columns: 1fr;
+            }
+            .playlist-column {
+                max-height: 450px;
+            }
+        }
+
+        .rowaq-btn-youtube {
+            background: linear-gradient(135deg, #e52d27 0%, #b31217 100%);
+            color: #ffffff !important;
+            border: none;
+        }
+
+        .rowaq-btn-youtube:hover {
+            background: linear-gradient(135deg, #b31217 0%, #e52d27 100%);
+            box-shadow: 0 8px 20px rgba(229, 45, 39, 0.3);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Theme Toggle Button -->
+    <button class="theme-toggle-btn" id="themeToggle" title="تبديل المظهر الداكن/المضيء">
+        <svg id="themeIcon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+    </button>
+
+    <div class="app-container">
+        <!-- Back Button -->
+        <div class="back-btn-container">
+            <a href="Rowaq_Stages.html" class="back-btn" id="dynamicBackBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+                <span>رجوع للمستوى</span>
+            </a>
+        </div>
+
+        <!-- Header Hero (Dynamic) -->
+        <header class="header-hero" style="padding: 25px 20px; margin-bottom: 25px;">
+            <div class="logo-wrapper" style="width: 100px; height: 100px; border-width: 2px;">
+                <img src="https://www.alquranulhakeem.net/Rowaq/Al_Azhar_Logo_1.jpeg" alt="شعار المادة" class="logo-img" id="subjectLogo">
+            </div>
+            <h1 class="header-title-arabic font-amiri" id="subjectTitle" style="font-size: 2rem; margin-top: 5px;">تحميل المادة...</h1>
+            <div class="header-subtitle" id="subjectStage" style="font-size: 1rem;">الرواق الأزهري</div>
+        </header>
+
+        <!-- Player Page Layout -->
+        <main class="lecture-player-container" id="playerLayout">
+            <!-- Video Player Column -->
+            <section class="video-player-column">
+                <div class="video-box">
+                    <iframe class="video-iframe" id="videoIframe" src="" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+                <div class="video-details-card">
+                    <h2 class="video-current-title" id="activeLectureTitle">اسم المحاضرة الحالية</h2>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <a href="#" class="rowaq-btn rowaq-btn-accent" style="width: auto; padding: 10px 20px;" id="pdfNotesBtn" target="_blank">
+                            <span>📄 تحميل المحاضرات المكتوبة (PDF)</span>
+                        </a>
+                        <a href="#" class="rowaq-btn rowaq-btn-youtube" style="width: auto; padding: 10px 20px;" id="youtubeFallbackBtn" target="_blank">
+                            <span>📺 مشاهدة مباشرة على YouTube</span>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Playlist Column -->
+            <section class="playlist-column">
+                <div class="playlist-header">
+                    <div class="playlist-header-title">فهرس المحاضرات</div>
+                    <div class="playlist-header-count" id="lecturesCount">عدد المحاضرات: 0</div>
+                </div>
+                <div class="playlist-items" id="playlistItems">
+                    <!-- Dynamic Playlist Items -->
+                </div>
+            </section>
+        </main>
+
+        <!-- Error Card (shown only if subject not found) -->
+        <div class="error-card" id="errorCard" style="display: none;">
+            <h2 class="coming-soon-title" style="color: red; font-size: 1.8rem; margin-bottom: 15px;">خطأ في تحميل الصفحة</h2>
+            <p class="coming-soon-text">المادة المطلوبة غير متوفرة أو لم يتم العثور عليها.</p>
+            <a href="Rowaq_Stages.html" class="rowaq-btn rowaq-btn-primary" style="margin-top: 20px;">العودة للرئيسية</a>
+        </div>
+
+        <!-- Footer Section -->
+        <footer class="footer-section">
+            <div class="footer-credit">تم بحمد الله تعالى وتوفيقه</div>
+            <a href="mailto:info@alquranulhakeem.net" class="footer-contact">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+                <span>info@alquranulhakeem.net</span>
+            </a>
+        </footer>
+    </div>
+
+    <!-- Load the Scraped Database -->
+    <script src="lectures_data.js"></script>
+
+    <!-- UI Logic Script -->
+    <script>
+        // Disable context menu
+        document.addEventListener('contextmenu', event => event.preventDefault());
+
+        // Parse query params to get subject
+        const urlParams = new URLSearchParams(window.location.search);
+        const subjectKey = urlParams.get('subject');
+
+        const playerLayout = document.getElementById('playerLayout');
+        const errorCard = document.getElementById('errorCard');
+
+        if (!subjectKey || !LECTURES_DATA[subjectKey]) {
+            // Hide player and show error card
+            playerLayout.style.display = 'none';
+            errorCard.style.display = 'block';
+            document.getElementById('subjectTitle').textContent = "خطأ في المعامل";
+        } else {
+            // Populate subject data
+            const data = LECTURES_DATA[subjectKey];
+            
+            document.getElementById('subjectTitle').textContent = data.title;
+            document.title = `${data.title} - مشاهدة المحاضرات`;
+            document.getElementById('subjectStage').textContent = data.stage;
+            
+            if (data.logo) {
+                document.getElementById('subjectLogo').src = data.logo;
+            }
+
+            // PDF link visibility
+            const pdfNotesBtn = document.getElementById('pdfNotesBtn');
+            if (data.pdf_link) {
+                pdfNotesBtn.href = data.pdf_link;
+                pdfNotesBtn.style.display = 'flex';
+            } else {
+                pdfNotesBtn.style.display = 'none';
+            }
+
+            // Dynamic Back Button path determination
+            const dynamicBackBtn = document.getElementById('dynamicBackBtn');
+            const stageName = data.stage;
+            if (stageName.includes("المستوى الأول") && stageName.includes("التمهيدية")) {
+                dynamicBackBtn.href = "Rowaq_Intr_Stage_Level_1.html";
+            } else if (stageName.includes("المستوى الثاني") && stageName.includes("التمهيدية")) {
+                dynamicBackBtn.href = "Intro_Level_2/Rowaq_Intr_Stage_Level_2.html";
+            } else if (stageName.includes("المستوى الأول") && stageName.includes("المتوسطة")) {
+                dynamicBackBtn.href = "MSL_1/MSL_1.html";
+            } else if (stageName.includes("المستوى الثاني") && stageName.includes("المتوسطة")) {
+                dynamicBackBtn.href = "MSL_2/MSL_2.html";
+            } else if (stageName.includes("المرحلة المتقدمة")) {
+                dynamicBackBtn.href = "ASL/Tafseer_1.html"; // Redirects to Advanced Tafseer level 1 menu page
+            } else {
+                dynamicBackBtn.href = "Rowaq_Stages.html";
+            }
+
+            // Load playlist
+            const playlistItems = document.getElementById('playlistItems');
+            const lectures = data.lectures;
+            document.getElementById('lecturesCount').textContent = `عدد المحاضرات: ${lectures.length}`;
+
+            if (lectures.length === 0) {
+                playlistItems.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-light);">قريباً إن شاء الله.</div>';
+                document.getElementById('videoIframe').src = "";
+                document.getElementById('activeLectureTitle').textContent = "لم تتوفر محاضرات بعد";
+            } else {
+                // Populate lectures list
+                lectures.forEach((lec, idx) => {
+                    const item = document.createElement('div');
+                    item.className = 'playlist-item';
+                    if (idx === 0) item.classList.add('active');
+                    
+                    item.innerHTML = `
+                        <div class="playlist-item-num">${idx + 1}</div>
+                        <div class="playlist-item-title">${lec.title}</div>
+                    `;
+                    
+                    item.addEventListener('click', () => {
+                        // Switch active video
+                        document.querySelectorAll('.playlist-item').forEach(el => el.classList.remove('active'));
+                        item.classList.add('active');
+                        playVideo(lec.youtube_id, lec.title);
+                    });
+                    
+                    playlistItems.appendChild(item);
+                });
+
+                // Play first video on load
+                playVideo(lectures[0].youtube_id, lectures[0].title);
+            }
+        }
+
+        function playVideo(youtubeId, title) {
+            const iframe = document.getElementById('videoIframe');
+            iframe.src = `https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1&autohide=1&showinfo=0&controls=1`;
+            document.getElementById('activeLectureTitle').textContent = title;
+
+            // Update YouTube fallback link
+            const fallbackBtn = document.getElementById('youtubeFallbackBtn');
+            if (fallbackBtn) {
+                fallbackBtn.href = `https://www.youtube.com/watch?v=${youtubeId}`;
+            }
+        }
+
+        // Theme Switcher script
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeIcon(savedTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        });
+
+        function updateThemeIcon(theme) {
+            if (theme === 'dark') {
+                themeIcon.innerHTML = `
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                `;
+            } else {
+                themeIcon.innerHTML = `
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
